@@ -17,23 +17,28 @@ class MyApp extends StatelessWidget {
 }
 
 class MyHomePage extends StatefulWidget {
-  MyHomePage({Key key}) : super(key: key);
+  MyHomePage({Key? key}) : super(key: key);
 
   @override
   _MyHomePageState createState() => _MyHomePageState();
 }
 
-List<Employee> _employees;
-
-EmployeeDataSource _employeeDataSource = EmployeeDataSource();
 List<Employee> paginatedDataSource = [];
+List<Employee> _employees = [];
+final int rowsPerPage = 10;
 
 class _MyHomePageState extends State<MyHomePage> {
+  late EmployeeDataSource _employeeDataSource;
+
   bool showLoadingIndicator = true;
+  double pageCount = 0;
+
   @override
   void initState() {
     super.initState();
     _employees = populateData();
+    _employeeDataSource = EmployeeDataSource();
+    pageCount = (_employees.length / rowsPerPage).ceilToDouble();
   }
 
   @override
@@ -55,7 +60,7 @@ class _MyHomePageState extends State<MyHomePage> {
                   height: 60,
                   width: constraints.maxWidth,
                   child: SfDataPager(
-                    rowsPerPage: 3,
+                    pageCount: pageCount,
                     direction: Axis.horizontal,
                     onPageNavigationStart: (int pageIndex) {
                       setState(() {
@@ -83,10 +88,36 @@ class _MyHomePageState extends State<MyHomePage> {
         source: _employeeDataSource,
         columnWidthMode: ColumnWidthMode.fill,
         columns: <GridColumn>[
-          GridNumericColumn(mappingName: 'id', headerText: 'ID'),
-          GridTextColumn(mappingName: 'name', headerText: 'Name'),
-          GridTextColumn(mappingName: 'designation', headerText: 'Designation'),
-          GridNumericColumn(mappingName: 'salary', headerText: 'Salary'),
+          GridTextColumn(
+              columnName: 'id',
+              label: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'ID',
+                  ))),
+          GridTextColumn(
+              columnName: 'name',
+              label: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  alignment: Alignment.center,
+                  child: Text('Name'))),
+          GridTextColumn(
+              columnName: 'designation',
+              width: 110,
+              label: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  alignment: Alignment.center,
+                  child: Text(
+                    'Designation',
+                    overflow: TextOverflow.ellipsis,
+                  ))),
+          GridTextColumn(
+              columnName: 'salary',
+              label: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  alignment: Alignment.center,
+                  child: Text('Salary'))),
         ]);
   }
 
@@ -131,6 +162,9 @@ class _MyHomePageState extends State<MyHomePage> {
       Employee(10010, 'Keefe', 'Project Lead', 25000),
       Employee(10011, 'Doran', 'Developer', 35000),
       Employee(10012, 'Linda', 'Designer', 19000),
+      Employee(10013, 'Perry', 'Developer', 15000),
+      Employee(10014, 'Gable', 'Designer', 10000),
+      Employee(10015, 'Keefe', 'Project Lead', 25000),
     ];
   }
 }
@@ -147,46 +181,57 @@ class Employee {
   final int salary;
 }
 
-class EmployeeDataSource extends DataGridSource<Employee> {
+class EmployeeDataSource extends DataGridSource {
+  EmployeeDataSource() {
+    paginatedDataSource = _employees.getRange(0, 10).toList();
+    buildDataGridRows();
+  }
+
+  List<DataGridRow> _employeeData = [];
+
   @override
-  List<Employee> get dataSource => paginatedDataSource;
+  List<DataGridRow> get rows => _employeeData;
+
   @override
-  Object getValue(Employee employee, String columnName) {
-    switch (columnName) {
-      case 'id':
-        return employee.id;
-        break;
-      case 'name':
-        return employee.name;
-        break;
-      case 'salary':
-        return employee.salary;
-        break;
-      case 'designation':
-        return employee.designation;
-        break;
-      default:
-        return ' ';
-        break;
+  Future<bool> handlePageChange(int oldPageIndex, int newPageIndex) async {
+    await Future.delayed(const Duration(seconds: 3));
+    int startIndex = newPageIndex * rowsPerPage;
+    int endIndex = startIndex + rowsPerPage;
+    if (startIndex < _employees.length) {
+      if (endIndex > _employees.length) {
+        endIndex = _employees.length;
+      }
+      paginatedDataSource =
+          _employees.getRange(startIndex, endIndex).toList(growable: false);
+      buildDataGridRows();
+    } else {
+      paginatedDataSource = [];
     }
+    notifyListeners();
+    return true;
+  }
+
+  void buildDataGridRows() {
+    _employeeData = paginatedDataSource
+        .map<DataGridRow>((e) => DataGridRow(cells: [
+              DataGridCell<int>(columnName: 'id', value: e.id),
+              DataGridCell<String>(columnName: 'name', value: e.name),
+              DataGridCell<String>(
+                  columnName: 'designation', value: e.designation),
+              DataGridCell<int>(columnName: 'salary', value: e.salary),
+            ]))
+        .toList();
   }
 
   @override
-  int get rowCount => _employees.length;
-
-  @override
-  Future<bool> handlePageChange(int oldPageIndex, int newPageIndex,
-      int startRowIndex, int rowsPerPage) async {
-    int endIndex = startRowIndex + rowsPerPage;
-    if (endIndex > _employees.length) {
-      endIndex = _employees.length - 1;
-    }
-
-    await Future.delayed(Duration(milliseconds: 2000));
-
-    paginatedDataSource = List.from(
-        _employees.getRange(startRowIndex, endIndex).toList(growable: false));
-    notifyListeners();
-    return true;
+  DataGridRowAdapter buildRow(DataGridRow row) {
+    return DataGridRowAdapter(
+        cells: row.getCells().map<Widget>((e) {
+      return Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+        child: Text(e.value.toString()),
+      );
+    }).toList());
   }
 }
