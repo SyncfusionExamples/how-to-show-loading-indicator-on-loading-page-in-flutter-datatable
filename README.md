@@ -1,7 +1,6 @@
-# Flutter DataTable Pagination with BLoC and Async Loading
+# Flutter DataGrid Show Loading Indicator
 
-
-This repository contains a sample that demonstrates how to load data asynchronously with Bloc for paging in Syncfusion® DataGrid package.
+This repository contains a sample that demonstrates how to show loading indicator in Syncfusion® DataGrid package.
 
 
 ## Syncfusion® controls:
